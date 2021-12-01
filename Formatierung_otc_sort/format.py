@@ -46,38 +46,45 @@ def conv_det(otc_det_file):
     datei_name = otc_det.name
     datei_name = datei_name.replace(".otdet","_")
     print(datei_name)
-    sort_det = open(f'{datei_name}det-for-sort.txt',"w")
+    sort_det = open(f'{datei_name}det-for-sort-noperson.txt',"w")
     zeile = kopf
 
-    while zeile <= len(otc_det_arr)-7:
-        if zeile != kopf: #zur nächsten Detektion wandern (+4, falls nächstes frame, else "conf" -> +4+1)
-            zeile = zeile + 4
-        
-        if zeile == kopf:
-            start_frame = otc_det_arr[zeile].index("\"")+1
-            frame = (otc_det_arr[zeile])[start_frame]
-            sort_det.write((frame+",-1,"))
-            zeile = zeile + 5
+    # erste Framenummer auslesen
+    start_frame = otc_det_arr[zeile].index("\"")+1
+    frame = (otc_det_arr[zeile])[start_frame]
+    # sort_det.write((frame+",-1,"))
+    zeile = zeile + 4
+
+    while zeile <= len(otc_det_arr)-7:        
         
         if "{" in otc_det_arr[zeile] and zeile != kopf: #checken, ob jetzt ein neues Frame kommt
-            start_frame = otc_det_arr[zeile].index("\"")+1 
+            start_frame = otc_det_arr[zeile].index("\"")+1 #BUG jetzt verzählt er sich irgendwo - Mittagspause
             end_frame = otc_det_arr[zeile].index(":")-1
             frame = ""
             for ziffer in range(start_frame, end_frame): #neue frame nummer einlesen
                 frame = frame + (otc_det_arr[zeile])[ziffer]
-            sort_det.write("\n"+ (frame+",-1,"))
-            zeile = zeile + 5 #zur nächsten Detektion
+            # sort_det.write("\n"+ (frame+",-1,"))
+            zeile = zeile + 4 #zu conf
         
+        #nur Boundingboxen bestimmter Klassen mitnehmen
+        klasse = (zeile-1)
+        if not ("car" in otc_det_arr[klasse] or "truck" in otc_det_arr[klasse] or "bus" in otc_det_arr[klasse] or "motorcylce" in otc_det_arr[klasse]):
+            zeile = zeile + 8
+            continue
+
         if "conf" in otc_det_arr[zeile]: #falls nicht nächstes frame, noch eine Zeile weiter
             zeile = zeile + 1
-            sort_det.write("\n"+ (frame+",-1,"))
-
+            sort_det.write((frame+",-1,"))
+     
         for zeile in range(zeile,(zeile+4)): #x,y,w,h übertragen
             start = otc_det_arr[zeile].index(":")+2
             stop = len(otc_det_arr[zeile])-1
             for ziffer in range((start),stop):
                 sort_det.writelines((otc_det_arr[zeile])[(ziffer)])
-        sort_det.write(",-1,-1,-1,-1")
+        sort_det.write(",-1,-1,-1,-1\n")
+
+        #zur nächsten Detektion wandern (+4, falls nächstes frame, else "conf" -> +4+1)
+        zeile = zeile + 4
 
     sort_det.close()
     return(otc_det_arr)
